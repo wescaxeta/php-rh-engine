@@ -1,0 +1,22 @@
+{
+    "name": "caxetaw/php-rh-engine",
+    "description": "Motor de regras para gestão de Recursos Humanos — férias, diárias e afastamentos",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "RhEngine\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RhEngine\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^8.2|^8.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.3"
+    }
+}
