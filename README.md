@@ -74,5 +74,5 @@ composer install
 ## Contexto de origem
 
 Desenvolvido como demonstração de padrões aplicados em sistema agropecuário estadual,
-operando em ambiente multi-tenant (fork por estado, 13 UFs), onde regras de negócio
+operando em ambiente multi-tenant (fork por estado, 9 UFs), onde regras de negócio
 de RH variam conforme legislação estadual e tipo de vínculo funcional.
