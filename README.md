@@ -1,5 +1,7 @@
 # php-rh-engine
 
+![Tests](https://github.com/wescaxeta/php-rh-engine/actions/workflows/tests.yml/badge.svg)
+
 Motor de regras para gestão de Recursos Humanos — férias, diárias e afastamentos.
 
 Projeto demonstrativo baseado em experiência real com sistema multi-tenant em produção
