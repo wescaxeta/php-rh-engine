@@ -79,11 +79,12 @@ class FeriasCalculatorTest extends TestCase
 
     public function testPeriodoVencidoQuandoReferenciaPassouDoFim(): void
     {
-        $admissao   = new DateTimeImmutable('2023-01-01');
-        $referencia = new DateTimeImmutable('2026-01-01');
+        $admissao          = new DateTimeImmutable('2023-01-01');
+        $referenciaPassada = new DateTimeImmutable('2024-06-01'); // dentro do 2o período
+        $referenciaFutura  = new DateTimeImmutable('2026-01-01'); // após o fim do 2o período
 
-        $periodo = $this->calculator->calcularPeriodoAquisitivo($admissao, $referencia);
+        $periodo = $this->calculator->calcularPeriodoAquisitivo($admissao, $referenciaPassada);
 
-        $this->assertTrue($periodo->estaVencido($referencia));
+        $this->assertTrue($periodo->estaVencido($referenciaFutura));
     }
 }
