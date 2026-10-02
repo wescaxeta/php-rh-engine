@@ -3,65 +3,59 @@
 namespace RhEngine\Model\Ferias;
 
 use DateTimeImmutable;
-use RhEngine\Exception\RhException;
+use RhEngine\Exception\DadoInvalidoException;
+use RhEngine\Exception\ParcelaFeriasInvalidaException;
+use RhEngine\Support\Datas;
 
-class Calculator
+final class Calculator
 {
-    private const DIAS_POR_PERIODO   = 30;
-    private const MESES_PARA_AQUISICAO = 12;
-    private const MAX_PARCELAS       = 3;
-    private const MINIMO_DIAS_PARCELA = 10;
+    private const int DIAS_POR_PERIODO     = 30;
+    private const int MESES_PARA_AQUISICAO = 12;
+    private const int MAX_PARCELAS         = 3;
+    private const int MINIMO_DIAS_PARCELA  = 10;
 
     public function calcularPeriodoAquisitivo(
         DateTimeImmutable $dataAdmissao,
-        DateTimeImmutable $referencia
+        DateTimeImmutable $referencia,
     ): PeriodoAquisitivo {
-        $mesesTrabalhados  = $this->mesesEntreDatas($dataAdmissao, $referencia);
-        $periodosCompletos = intdiv($mesesTrabalhados, self::MESES_PARA_AQUISICAO);
+        if ($referencia < $dataAdmissao) {
+            throw new DadoInvalidoException('Data de referência não pode ser anterior à admissão.');
+        }
 
-        $inicioPeriodo = $dataAdmissao->modify(
-            sprintf('+%d months', $periodosCompletos * self::MESES_PARA_AQUISICAO)
-        );
-        $fimPeriodo = $inicioPeriodo->modify('+12 months -1 day');
+        // Avança período a período a partir da admissão (e não a partir do início do
+        // período anterior) para não acumular o ajuste de fim de mês — ex.: admissão em 31/01.
+        $numero = 1;
+        while (Datas::adicionarMeses($dataAdmissao, $numero * self::MESES_PARA_AQUISICAO) <= $referencia) {
+            $numero++;
+        }
 
-        return new PeriodoAquisitivo(
-            inicio: $inicioPeriodo,
-            fim: $fimPeriodo,
-            numero: $periodosCompletos + 1,
-        );
+        $inicio = Datas::adicionarMeses($dataAdmissao, ($numero - 1) * self::MESES_PARA_AQUISICAO);
+        $fim    = Datas::adicionarMeses($dataAdmissao, $numero * self::MESES_PARA_AQUISICAO)->modify('-1 day');
+
+        return new PeriodoAquisitivo(inicio: $inicio, fim: $fim, numero: $numero);
     }
 
     public function calcularSaldo(int $diasGozados, int $periodosVencidos = 1): int
     {
-        $totalDireito = $periodosVencidos * self::DIAS_POR_PERIODO;
-        return max(0, $totalDireito - $diasGozados);
+        if ($diasGozados < 0 || $periodosVencidos < 0) {
+            throw new DadoInvalidoException('Dias gozados e períodos vencidos não podem ser negativos.');
+        }
+
+        return max(0, $periodosVencidos * self::DIAS_POR_PERIODO - $diasGozados);
     }
 
     public function validarParcela(int $diasSolicitados, int $saldoAtual, int $parcelasUsadas): void
     {
         if ($parcelasUsadas >= self::MAX_PARCELAS) {
-            throw new RhException('Limite de parcelas de férias atingido.');
+            throw ParcelaFeriasInvalidaException::limiteDeParcelasAtingido(self::MAX_PARCELAS);
         }
 
         if ($diasSolicitados < self::MINIMO_DIAS_PARCELA) {
-            throw new RhException(sprintf(
-                'Parcela mínima é de %d dias.',
-                self::MINIMO_DIAS_PARCELA
-            ));
+            throw ParcelaFeriasInvalidaException::abaixoDoMinimo(self::MINIMO_DIAS_PARCELA);
         }
 
         if ($diasSolicitados > $saldoAtual) {
-            throw new RhException(sprintf(
-                'Saldo insuficiente. Disponível: %d dias, solicitado: %d dias.',
-                $saldoAtual,
-                $diasSolicitados
-            ));
+            throw ParcelaFeriasInvalidaException::saldoInsuficiente($saldoAtual, $diasSolicitados);
         }
-    }
-
-    private function mesesEntreDatas(DateTimeImmutable $inicio, DateTimeImmutable $fim): int
-    {
-        $diff = $inicio->diff($fim);
-        return $diff->y * 12 + $diff->m;
     }
 }

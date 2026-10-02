@@ -3,12 +3,17 @@
 namespace RhEngine\Tests\Unit;
 
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RhEngine\Enum\MotivoAfastamento;
-use RhEngine\Exception\RhException;
+use RhEngine\Exception\DadoInvalidoException;
 use RhEngine\Model\Afastamento\Validator;
 
-class AfastamentoValidatorTest extends TestCase
+#[CoversClass(Validator::class)]
+#[CoversClass(MotivoAfastamento::class)]
+final class AfastamentoValidatorTest extends TestCase
 {
     private Validator $validator;
 
@@ -17,9 +22,10 @@ class AfastamentoValidatorTest extends TestCase
         $this->validator = new Validator();
     }
 
-    public function testIdPessoaInvalidoLancaExcecao(): void
+    #[Test]
+    public function idPessoaInvalidoLancaExcecao(): void
     {
-        $this->expectException(RhException::class);
+        $this->expectException(DadoInvalidoException::class);
         $this->expectExceptionMessage('Pessoa inválida');
 
         $this->validator->validar(
@@ -30,9 +36,10 @@ class AfastamentoValidatorTest extends TestCase
         );
     }
 
-    public function testDataInicioMaiorQueFimLancaExcecao(): void
+    #[Test]
+    public function dataInicioMaiorQueFimLancaExcecao(): void
     {
-        $this->expectException(RhException::class);
+        $this->expectException(DadoInvalidoException::class);
         $this->expectExceptionMessage('Data de início não pode ser posterior');
 
         $this->validator->validar(
@@ -43,24 +50,65 @@ class AfastamentoValidatorTest extends TestCase
         );
     }
 
-    public function testComissionadoSempreDesbloqueiaHorario(): void
+    #[Test]
+    public function afastamentoDeUmDiaEValido(): void
     {
-        $this->assertTrue(
-            $this->validator->desbloqueiaHorario(MotivoAfastamento::LicencaMedica, eComissionado: true)
+        $this->expectNotToPerformAssertions();
+
+        $this->validator->validar(
+            idPessoa: 1,
+            motivo: MotivoAfastamento::Obito,
+            inicio: new DateTimeImmutable('2026-01-10'),
+            fim: new DateTimeImmutable('2026-01-10'),
         );
     }
 
-    public function testAfastamentoServicoDesbloqueiaHorarioNaoComissionado(): void
+    /**
+     * @return iterable<string, array{MotivoAfastamento, bool, bool}>
+     */
+    public static function regrasDeDesbloqueio(): iterable
     {
-        $this->assertTrue(
-            $this->validator->desbloqueiaHorario(MotivoAfastamento::AfastamentoServico, eComissionado: false)
-        );
+        foreach (MotivoAfastamento::cases() as $motivo) {
+            yield $motivo->name . ' / comissionado' => [$motivo, true, true];
+        }
+
+        yield 'afastamento a serviço / efetivo' => [MotivoAfastamento::AfastamentoServico, false, true];
+        yield 'licença médica / efetivo' => [MotivoAfastamento::LicencaMedica, false, false];
+        yield 'licença-prêmio / efetivo' => [MotivoAfastamento::LicencaPremio, false, false];
     }
 
-    public function testLicencaMedicaNaoDesbloqueiaHorarioNaoComissionado(): void
+    #[Test]
+    #[DataProvider('regrasDeDesbloqueio')]
+    public function aplicaRegraDeDesbloqueioDeHorario(
+        MotivoAfastamento $motivo,
+        bool $eComissionado,
+        bool $esperado,
+    ): void {
+        self::assertSame($esperado, $this->validator->desbloqueiaHorario($motivo, $eComissionado));
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function codigosInexistentes(): iterable
     {
-        $this->assertFalse(
-            $this->validator->desbloqueiaHorario(MotivoAfastamento::LicencaMedica, eComissionado: false)
-        );
+        yield 'zero' => [0];
+        yield 'após o último' => [7];
+        yield 'negativo' => [-1];
+    }
+
+    #[Test]
+    #[DataProvider('codigosInexistentes')]
+    public function motivoForaDoDominioNaoEAceito(int $codigo): void
+    {
+        self::assertNull(MotivoAfastamento::tryFrom($codigo));
+    }
+
+    #[Test]
+    public function todoMotivoTemRotulo(): void
+    {
+        foreach (MotivoAfastamento::cases() as $motivo) {
+            self::assertNotSame('', $motivo->rotulo());
+        }
     }
 }

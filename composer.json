@@ -1,8 +1,15 @@
 {
-    "name": "caxetaw/php-rh-engine",
+    "name": "wescaxeta/php-rh-engine",
     "description": "Motor de regras para gestão de Recursos Humanos — férias, diárias e afastamentos",
     "type": "library",
     "license": "MIT",
+    "keywords": ["rh", "hr", "ferias", "diarias", "domain", "business-rules"],
+    "authors": [
+        {
+            "name": "Weslley Caxeta",
+            "homepage": "https://github.com/wescaxeta"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "RhEngine\\": "src/"
@@ -17,6 +24,38 @@
         "php": "^8.4"
     },
     "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^13.3"
-    }
+    },
+    "scripts": {
+        "test": "phpunit --testdox",
+        "test:coverage": "phpunit --coverage-text --coverage-clover=coverage.xml",
+        "analyse": "phpstan analyse --memory-limit=512M",
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "php-cs-fixer fix",
+        "ci": [
+            "@cs",
+            "@analyse",
+            "@test"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Executa a suíte de testes",
+        "test:coverage": "Executa os testes com relatório de cobertura (requer PCOV ou Xdebug)",
+        "analyse": "Análise estática com PHPStan (nível max)",
+        "cs": "Verifica o estilo de código (PER-CS)",
+        "cs:fix": "Corrige o estilo de código automaticamente",
+        "ci": "Roda o mesmo pipeline do GitHub Actions localmente"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

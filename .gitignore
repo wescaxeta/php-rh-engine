@@ -1,3 +1,8 @@
-vendor/
+/vendor/
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/coverage.xml
+/coverage/
 .env
-.phpunit.cache/
+.idea/
+.vscode/

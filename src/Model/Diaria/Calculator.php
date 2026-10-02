@@ -2,44 +2,26 @@
 
 namespace RhEngine\Model\Diaria;
 
-use RhEngine\Enum\SituacaoDiaria;
-use RhEngine\Exception\RhException;
+use RhEngine\Exception\DadoInvalidoException;
+use RhEngine\ValueObject\Money;
 
-class Calculator
+final class Calculator
 {
-    private const PERCENTUAL_SEM_PERNOITE = 0.5;
+    private const int PERCENTUAL_SEM_PERNOITE = 50;
 
     public function calcularValor(
-        float $valorDiariaPadrao,
+        Money $valorDiariaPadrao,
         int $quantidadeDias,
-        bool $comPernoite
-    ): float {
+        bool $comPernoite,
+    ): Money {
+        if ($quantidadeDias <= 0) {
+            throw new DadoInvalidoException('Quantidade de dias deve ser maior que zero.');
+        }
+
         $valorUnitario = $comPernoite
             ? $valorDiariaPadrao
-            : $valorDiariaPadrao * self::PERCENTUAL_SEM_PERNOITE;
+            : $valorDiariaPadrao->percentual(self::PERCENTUAL_SEM_PERNOITE);
 
-        return round($valorUnitario * $quantidadeDias, 2);
-    }
-
-    public function proximaSituacao(SituacaoDiaria $situacaoAtual): SituacaoDiaria
-    {
-        return match ($situacaoAtual) {
-            SituacaoDiaria::Solicitada     => SituacaoDiaria::AprovadaNucleo,
-            SituacaoDiaria::AprovadaNucleo => SituacaoDiaria::Aprovada,
-            SituacaoDiaria::Aprovada       => SituacaoDiaria::Paga,
-            default => throw new RhException(sprintf(
-                'Situação "%s" não permite avanço no fluxo.',
-                $situacaoAtual->value
-            )),
-        };
-    }
-
-    public function podeAvancar(SituacaoDiaria $situacao): bool
-    {
-        return in_array($situacao, [
-            SituacaoDiaria::Solicitada,
-            SituacaoDiaria::AprovadaNucleo,
-            SituacaoDiaria::Aprovada,
-        ], strict: true);
+        return $valorUnitario->multiplicar($quantidadeDias);
     }
 }

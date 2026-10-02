@@ -2,12 +2,16 @@
 
 namespace RhEngine\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RhEngine\Enum\SituacaoDiaria;
-use RhEngine\Exception\RhException;
+use RhEngine\Exception\DadoInvalidoException;
 use RhEngine\Model\Diaria\Calculator;
+use RhEngine\ValueObject\Money;
 
-class DiariaCalculatorTest extends TestCase
+#[CoversClass(Calculator::class)]
+final class DiariaCalculatorTest extends TestCase
 {
     private Calculator $calculator;
 
@@ -16,64 +20,31 @@ class DiariaCalculatorTest extends TestCase
         $this->calculator = new Calculator();
     }
 
-    public function testValorComPernoiteMultiplicaPorDias(): void
+    /**
+     * @return iterable<string, array{string, int, bool, int}>
+     */
+    public static function valores(): iterable
     {
-        $valor = $this->calculator->calcularValor(
-            valorDiariaPadrao: 200.00,
-            quantidadeDias: 3,
-            comPernoite: true
-        );
-
-        $this->assertEquals(600.00, $valor);
+        yield 'com pernoite' => ['200.00', 3, true, 60000];
+        yield 'sem pernoite é metade' => ['200.00', 1, false, 10000];
+        yield 'metade de valor ímpar arredonda o centavo' => ['100.01', 1, false, 5001];
+        yield 'vários dias sem pernoite' => ['180.50', 4, false, 36100];
     }
 
-    public function testValorSemPernoiteEMetadeDoValorDiario(): void
+    #[Test]
+    #[DataProvider('valores')]
+    public function calculaValor(string $valorDiaria, int $dias, bool $comPernoite, int $centavosEsperados): void
     {
-        $valor = $this->calculator->calcularValor(
-            valorDiariaPadrao: 200.00,
-            quantidadeDias: 1,
-            comPernoite: false
-        );
+        $valor = $this->calculator->calcularValor(Money::deReais($valorDiaria), $dias, $comPernoite);
 
-        $this->assertEquals(100.00, $valor);
+        self::assertSame($centavosEsperados, $valor->centavos);
     }
 
-    public function testFluxoDeAprovacaoCompleto(): void
+    #[Test]
+    public function quantidadeDeDiasZeroLancaExcecao(): void
     {
-        $situacao = SituacaoDiaria::Solicitada;
+        $this->expectException(DadoInvalidoException::class);
 
-        $situacao = $this->calculator->proximaSituacao($situacao);
-        $this->assertEquals(SituacaoDiaria::AprovadaNucleo, $situacao);
-
-        $situacao = $this->calculator->proximaSituacao($situacao);
-        $this->assertEquals(SituacaoDiaria::Aprovada, $situacao);
-
-        $situacao = $this->calculator->proximaSituacao($situacao);
-        $this->assertEquals(SituacaoDiaria::Paga, $situacao);
-    }
-
-    public function testNaoPodeAvancarDiariaPaga(): void
-    {
-        $this->expectException(RhException::class);
-        $this->calculator->proximaSituacao(SituacaoDiaria::Paga);
-    }
-
-    public function testNaoPodeAvancarDiariaRejeitada(): void
-    {
-        $this->expectException(RhException::class);
-        $this->calculator->proximaSituacao(SituacaoDiaria::Rejeitada);
-    }
-
-    public function testPodeAvancarSituacoesIntermediarias(): void
-    {
-        $this->assertTrue($this->calculator->podeAvancar(SituacaoDiaria::Solicitada));
-        $this->assertTrue($this->calculator->podeAvancar(SituacaoDiaria::AprovadaNucleo));
-        $this->assertTrue($this->calculator->podeAvancar(SituacaoDiaria::Aprovada));
-    }
-
-    public function testNaoPodeAvancarSituacoesFinais(): void
-    {
-        $this->assertFalse($this->calculator->podeAvancar(SituacaoDiaria::Paga));
-        $this->assertFalse($this->calculator->podeAvancar(SituacaoDiaria::Rejeitada));
+        $this->calculator->calcularValor(Money::deReais('200.00'), quantidadeDias: 0, comPernoite: true);
     }
 }

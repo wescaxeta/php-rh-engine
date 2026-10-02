@@ -4,35 +4,31 @@ namespace RhEngine\Model\Afastamento;
 
 use DateTimeImmutable;
 use RhEngine\Enum\MotivoAfastamento;
-use RhEngine\Exception\RhException;
+use RhEngine\Exception\DadoInvalidoException;
 
-class Validator
+final class Validator
 {
-    private const MOTIVOS_QUE_DESBLOQUEIAM_HORARIO = [
-        MotivoAfastamento::AfastamentoServico,
-    ];
-
+    /**
+     * O motivo já chega validado pelo tipo (enum): valores fora do domínio
+     * falham em MotivoAfastamento::from() antes de alcançar esta regra.
+     */
     public function validar(
         int $idPessoa,
         MotivoAfastamento $motivo,
         DateTimeImmutable $inicio,
-        DateTimeImmutable $fim
+        DateTimeImmutable $fim,
     ): void {
         if ($idPessoa <= 0) {
-            throw new RhException('Pessoa inválida para cadastro de afastamento.');
+            throw new DadoInvalidoException('Pessoa inválida para cadastro de afastamento.');
         }
 
         if ($inicio > $fim) {
-            throw new RhException('Data de início não pode ser posterior à data de fim.');
+            throw new DadoInvalidoException('Data de início não pode ser posterior à data de fim.');
         }
     }
 
     public function desbloqueiaHorario(MotivoAfastamento $motivo, bool $eComissionado): bool
     {
-        if ($eComissionado) {
-            return true;
-        }
-
-        return in_array($motivo, self::MOTIVOS_QUE_DESBLOQUEIAM_HORARIO, strict: true);
+        return $eComissionado || $motivo->desbloqueiaHorario();
     }
 }
