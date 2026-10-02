@@ -22,7 +22,7 @@ jobs:
           php-version: "8.4"
           coverage: none
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
 
       - name: PHP-CS-Fixer (PER-CS)
         run: composer cs
@@ -45,7 +45,7 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: pcov
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@v4
 
       - name: PHPUnit com cobertura
         run: vendor/bin/phpunit --testdox --coverage-text --only-summary-for-coverage-text | tee phpunit.log
